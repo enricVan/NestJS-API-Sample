@@ -7,46 +7,43 @@ import {
   Patch,
   Post,
   Query,
-  ParseIntPipe,
-  ValidationPipe,
 } from '@nestjs/common';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { Prisma } from '@prisma/client';
 
+@SkipThrottle()
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @Post()
+  create(@Body() createUserDto: Prisma.UserCreateInput) {
+    return this.usersService.create(createUserDto);
+  }
+
+  @SkipThrottle({ default: false })
   @Get()
   findAll(@Query('role') role?: 'INTERN' | 'ENGINEER' | 'ADMIN') {
     return this.usersService.findAll(role);
   }
 
+  @Throttle({ short: { ttl: 1000, limit: 1 } })
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.usersService.findOne(id);
-  }
-
-  @Post()
-  create(
-    @Body(ValidationPipe)
-    createdUserDto: CreateUserDto,
-  ) {
-    return this.usersService.create(createdUserDto);
+  findOne(@Param('id') id: string) {
+    return this.usersService.findOne(+id);
   }
 
   @Patch(':id')
   update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body(ValidationPipe)
-    userUpdateDto: UpdateUserDto,
+    @Param('id') id: string,
+    @Body() updateUserDto: Prisma.UserUpdateInput,
   ) {
-    return this.usersService.update(id, userUpdateDto);
+    return this.usersService.update(+id, updateUserDto);
   }
 
   @Delete(':id')
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.usersService.delete(id);
+  remove(@Param('id') id: string) {
+    return this.usersService.remove(+id);
   }
 }
